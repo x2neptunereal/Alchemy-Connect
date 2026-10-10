@@ -1,0 +1,5 @@
+{
+  "wsPort": 3000,
+  "baseUrl": "localhost",
+  "refreshTime": 10
+}
