@@ -1,52 +1,63 @@
 # Alchemy Connect
 
-**English** · [ภาษาไทย](README.th.md)
+WebSocket bridge between a Roblox executor script and a web dashboard. This repo is the server + dashboard (Next.js).
 
-Server and dashboard for Alchemy Connect. Roblox clients connect here over WebSocket and show up live on the page.
+Docs: [connect.getalchemy.net](https://connect.getalchemy.net)
 
-Client (Lua) docs are at [connect.getalchemy.net](https://connect.getalchemy.net).
+- [Quick Start](https://connect.getalchemy.net/quick-start)
+- [Link Account](https://connect.getalchemy.net/link) · [Stats](https://connect.getalchemy.net/stats) · [Items](https://connect.getalchemy.net/items)
+- [Server](https://connect.getalchemy.net/server)
 
-## What you need
+## Install
 
-- Node.js 20 or newer
-- npm
-
-## Dev
+You need Node.js and npm.
 
 ```bash
+git clone https://github.com/x2neptunereal/Alchemy-Connect
+cd Alchemy-Connect
 npm install
+```
+
+## Run
+
+```bash
+# development
 npm run dev
-```
 
-Open http://localhost:3000. It reloads when you change files.
-
-## Build and run
-
-```bash
-npm install
+# production
 npm run build
-npm start
+npm run start
 ```
 
-Same address, http://localhost:3000.
+Open http://localhost:3000 for the dashboard.
 
 ## Port
 
-Default is 3000. Change it with `PORT`:
+Default is `3000`. It has to match `synchronization.port` in your script.
+
+Change it with `PORT`:
 
 ```bash
 # macOS / Linux
-PORT=4000 npm start
+PORT=4000 npm run start
 
 # Windows (PowerShell)
-$env:PORT=4000; npm start
+$env:PORT=4000; npm run start
 ```
 
-The port Roblox connects to, the base URL and the refresh time are set from the page (Settings → Connection). They're saved to `connect.config.json` next to `server.ts`. Delete that file to go back to defaults.
+You can also open a separate port just for Roblox from the dashboard (Settings → Connection). That's saved in `connect.config.json`. Delete the file to reset.
 
-## Heads up
+## Endpoint
 
-There's no login. Anyone who can reach the port can see your clients and send them messages. Fine on your own machine; if you open it to the internet, put something in front of it first.
+| Route | Protocol | |
+| --- | --- | --- |
+| `/connect/:userId` | `ws://` | One connection per Roblox client. Takes `link` and `stats` messages. |
+
+## Running on another machine
+
+Set `base_url` in your script to the server's IP or domain, and make sure the port is reachable from where Roblox is running.
+
+There's no login, so anyone who can reach the port can see your clients and send them messages. Put something in front of it before opening it to the internet.
 
 ## License
 
