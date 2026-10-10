@@ -1,5 +1,3 @@
-// Tiny Lua/Luau highlighter: no dependencies, colors come from --syn-* theme variables.
-
 type Kind = "kw" | "str" | "num" | "com" | "fn" | "key" | "glob" | "op" | "txt";
 
 const KEYWORDS = new Set(
@@ -30,12 +28,10 @@ function tokenize(src: string): { kind: Kind; text: string }[] {
     else if (word) {
       const rest = src.slice(TOKEN.lastIndex);
       if (KEYWORDS.has(word)) kind = "kw";
-      else if (/^\s*[({"']/.test(rest))
-        kind = "fn"; // call: foo(...) / foo"..."
-      else if (/^\s*=(?!=)/.test(rest))
-        kind = "key"; // table field / assignment target
+      else if (/^\s*[({"']/.test(rest)) kind = "fn";
+      else if (/^\s*=(?!=)/.test(rest)) kind = "key";
       else if (GLOBALS.has(word)) kind = "glob";
-      else if (/[:.]\s*$/.test(src.slice(0, m.index))) kind = "fn"; // method/field after : or .
+      else if (/[:.]\s*$/.test(src.slice(0, m.index))) kind = "fn";
     }
     out.push({ kind, text });
   }
@@ -58,7 +54,6 @@ export function LuaCode({ code }: { code: string }) {
   const lines = code.split("\n");
   const tokens = tokenize(code);
 
-  // split tokens back into lines so we can number them
   const rows: { kind: Kind; text: string }[][] = [[]];
   for (const t of tokens) {
     const parts = t.text.split("\n");

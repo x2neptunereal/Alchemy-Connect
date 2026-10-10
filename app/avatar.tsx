@@ -4,7 +4,6 @@ import { useState } from "react";
 import { IconDeviceGamepad2Filled, IconUserFilled } from "@tabler/icons-react";
 import type { ClientInfo, GameInfo } from "@/lib/connect";
 
-/** `blur` hides only the picture; the online/offline dot stays sharp. */
 export function Avatar({
   client,
   size = 36,
@@ -23,7 +22,6 @@ export function Avatar({
         style={{ filter: blur ? `blur(${Math.max(3, size * 0.09)}px)` : undefined }}
       >
         {src && !broken ? (
-          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={src}
             alt=""
@@ -58,7 +56,6 @@ export function subOf(c?: ClientInfo) {
   return parts.join(" · ");
 }
 
-/** Small game icon + name chip. */
 export function GameTag({ game, className = "" }: { game?: GameInfo; className?: string }) {
   const [broken, setBroken] = useState(false);
   if (!game) return null;
@@ -68,7 +65,6 @@ export function GameTag({ game, className = "" }: { game?: GameInfo; className?:
       title={`Game ${game.id}`}
     >
       {game.icon && !broken ? (
-        // eslint-disable-next-line @next/next/no-img-element
         <img
           src={game.icon}
           alt=""

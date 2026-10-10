@@ -12,7 +12,6 @@ function GameIcon({ game, size }: { game?: GameInfo; size: number }) {
   const [broken, setBroken] = useState(false);
   if (game?.icon && !broken)
     return (
-      // eslint-disable-next-line @next/next/no-img-element
       <img
         src={game.icon}
         alt=""
@@ -33,7 +32,6 @@ function GameIcon({ game, size }: { game?: GameInfo; size: number }) {
 
 const nameOf = (g: GameInfo) => g.name ?? `Game ${g.id}`;
 
-/** Dropdown in front of the client search: All games / one game. */
 export default function GameSelect({
   games,
   total,

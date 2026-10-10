@@ -11,11 +11,8 @@ import { Avatar, GameTag, nameOf } from "./avatar";
 import type { ClientInfo, Item, Stat } from "@/lib/connect";
 import type { ItemSort } from "@/lib/settings";
 
-/** What "Amount" sorts by: count, else the first number field (e.g. mastery). */
 const amountOf = (it: Item) =>
   it.count ?? (it.extra?.find((x) => typeof x.value === "number")?.value as number) ?? -Infinity;
-
-/* ---------- formatting ---------- */
 
 const decimalsOf = (n: number) =>
   Number.isInteger(n) ? 0 : Math.min(2, `${n}`.split(".")[1]?.length ?? 0);
@@ -23,7 +20,6 @@ const decimalsOf = (n: number) =>
 const fmtFull = (n: number, decimals = 0) =>
   n.toLocaleString("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 
-/** 20394662 -> "20.39M"; below a million stays full ("32,296"). */
 const fmtNum = (n: number, decimals = 0) => {
   const a = Math.abs(n);
   for (const [v, u] of [
@@ -60,9 +56,6 @@ function ago(ts: number, now: number) {
   return `${Math.floor(s / 60)}m ago`;
 }
 
-/* ---------- animation hooks ---------- */
-
-/** Smoothly counts from the previous value to `target` (ease-out). */
 function useTween(target: number, ms = 700) {
   const [value, setValue] = useState(target);
   const current = useRef(target);
@@ -89,7 +82,6 @@ function useTween(target: number, ms = 700) {
   return value;
 }
 
-/** Reports how much a number changed; `tick` bumps on every change so CSS animations replay. */
 function useChange(value: number | undefined) {
   const prev = useRef(value);
   const [change, setChange] = useState({ delta: 0, tick: 0 });
@@ -102,13 +94,11 @@ function useChange(value: number | undefined) {
   return change;
 }
 
-/* ---------- pieces ---------- */
-
 function Num({ value, className = "" }: { value: number; className?: string }) {
   const v = useTween(value);
   const [full, setFull] = useState(false);
   const d = decimalsOf(value);
-  const short = Math.abs(value) >= 1e6; // only big numbers have a short form (20.39M)
+  const short = Math.abs(value) >= 1e6;
   if (!short) return <span className={`tabular-nums ${className}`}>{fmtFull(v, d)}</span>;
   return (
     <span
@@ -127,7 +117,6 @@ function Num({ value, className = "" }: { value: number; className?: string }) {
   );
 }
 
-/** "+137" that floats up and fades out. */
 function Delta({
   delta,
   tick,
@@ -150,7 +139,6 @@ function Delta({
   );
 }
 
-/** Big uppercase section title with optional bits on the right. */
 function SectionHead({ title, right }: { title: string; right?: React.ReactNode }) {
   return (
     <div className="mb-4 flex flex-wrap items-center gap-3 px-1">
@@ -186,7 +174,6 @@ function StatCard({ s, highlight, index }: { s: Stat; highlight: boolean; index:
   );
 }
 
-/** Item picture: a plain image, or one cell cut out of a sprite sheet (imageOffset). */
 function ItemIcon({ it, box = 44 }: { it: Item; box?: number }) {
   const [broken, setBroken] = useState(false);
   const [sheet, setSheet] = useState<{ w: number; h: number } | null>(null);
@@ -205,7 +192,6 @@ function ItemIcon({ it, box = 44 }: { it: Item; box?: number }) {
   if (it.icon && !broken) {
     if (!sp) {
       inner = (
-        // eslint-disable-next-line @next/next/no-img-element
         <img
           src={it.icon}
           alt=""
@@ -214,7 +200,6 @@ function ItemIcon({ it, box = 44 }: { it: Item; box?: number }) {
         />
       );
     } else if (sheet) {
-      // r: loaded-image px per original-sheet px (1 for the full file, <1 for a thumbnail)
       const r = it.iconNative ? 1 : sheet.w / sp.sheet;
       const s = box / (Math.max(sp.w, sp.h) * r);
       inner = (
@@ -256,7 +241,7 @@ function Extra({ label, value }: { label: string; value: string | number }) {
 function ItemCard({ it, index }: { it: Item; index: number }) {
   const gained = useChange(it.gained);
   const count = useChange(it.count);
-  const float = count.tick ? count : gained; // prefer showing how much the inventory moved
+  const float = count.tick ? count : gained;
   const showGain = it.gained !== undefined && it.gained !== 0;
 
   return (
@@ -310,7 +295,6 @@ function ItemCard({ it, index }: { it: Item; index: number }) {
   );
 }
 
-/** Avatar + @username are blurred until clicked (safe for streaming / screenshots). */
 function Identity({
   client,
   id,
@@ -352,7 +336,6 @@ function Identity({
   );
 }
 
-/** One item group ("Materials"): big header with a count and its own search box. */
 function ItemSection({ title, items }: { title: string; items: Item[] }) {
   const [q, setQ] = useState("");
   const query = q.trim().toLowerCase();
@@ -386,7 +369,6 @@ function ItemSection({ title, items }: { title: string; items: Item[] }) {
       {shown.length ? (
         <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {(() => {
-            // key by name (+ repeat count for duplicate names) so re-sorting keeps each card
             const seen = new Map<string, number>();
             return shown.map((it, i) => {
               const n = (seen.get(it.name) ?? 0) + 1;
@@ -403,8 +385,6 @@ function ItemSection({ title, items }: { title: string; items: Item[] }) {
     </section>
   );
 }
-
-/* ---------- page ---------- */
 
 export default function Overview({
   client,
@@ -427,12 +407,11 @@ export default function Overview({
   }, []);
 
   const state = client?.state;
-  // timer: stats.started > profile time (os.time()) > when the socket connected
+
   const start = state?.started ?? client?.profile?.time ?? client?.connectedAt ?? 0;
   const end = client?.online ? now : (client?.lastSeen ?? now);
   const elapsed = now && start ? end - start : 0;
 
-  // items = { swords = {...}, fruits = {...} } -> one section per group, in the order received
   const groups: [string, Item[]][] = [];
   for (const it of state?.items ?? []) {
     const title = it.group ? prettyGroup(it.group) : "Items";

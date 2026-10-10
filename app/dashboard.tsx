@@ -43,8 +43,6 @@ type View = "clients" | "settings" | "license";
 
 const MAX_VIEW = 1000;
 
-/* ---------- helpers ---------- */
-
 function ago(ts: number, now: number) {
   const s = Math.max(0, Math.floor((now - ts) / 1000));
   if (s < 5) return "just now";
@@ -119,8 +117,6 @@ function clientFromPath(path: string): string | null {
   }
 }
 
-/* ---------- small pieces ---------- */
-
 function ServerPill({ status }: { status: Status }) {
   const label = status === "open" ? "Live" : status === "connecting" ? "Connecting" : "Offline";
   const color =
@@ -175,12 +171,10 @@ const Row = memo(function Row({ e, fresh }: { e: LogEntry; fresh: boolean }) {
   );
 });
 
-/* ---------- main ---------- */
-
 export default function Dashboard() {
   const [status, setStatus] = useState<Status>("connecting");
   const [clients, setClients] = useState<Record<string, ClientInfo>>({});
-  // selected client comes from the URL: /clients/{id}
+
   const [selected, setSelected] = useState<string | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [freshFrom, setFreshFrom] = useState(Infinity);
@@ -190,12 +184,12 @@ export default function Dashboard() {
   const [now, setNow] = useState(0);
   const [origin, setOrigin] = useState("ws://localhost:3000");
   const [conn, setConn] = useState<ConnectionConfig | null>(null);
-  // address Roblox should use: same host, Roblox port from settings
+
   const wsOrigin = conn ? `ws://${conn.baseUrl}:${conn.wsPort}` : origin;
   const [view, setView] = useState<View>("clients");
   const [settings, setSettings] = useSettings();
   const [pane, setPane] = useState<"overview" | "console">("overview");
-  // avatar + @username stay blurred until revealed (click the avatar on the client page)
+
   const [revealed, setRevealed] = useState<Set<string>>(() => new Set());
   const toggleReveal = useCallback(
     (id: string) =>
@@ -220,14 +214,12 @@ export default function Dashboard() {
     if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify(ev));
   }, []);
 
-  // ticking clock for "x ago"
   useEffect(() => {
     setNow(Date.now());
     const t = setInterval(() => setNow(Date.now()), 5000);
     return () => clearInterval(t);
   }, []);
 
-  // socket to the server
   useEffect(() => {
     const wsProto = location.protocol === "https:" ? "wss" : "ws";
     setOrigin(`${wsProto}://${location.host}`);
@@ -303,7 +295,6 @@ export default function Dashboard() {
     };
   }, []);
 
-  // URL changed (click, back/forward, direct link) -> load that client's messages
   useEffect(() => {
     selectedRef.current = selected;
     setLogs([]);
@@ -318,9 +309,7 @@ export default function Dashboard() {
     setSelected(id);
   }, []);
 
-  // read the URL on load and on back/forward
   useEffect(() => {
-    // old links: /?c={id} -> /clients/{id}
     const legacy = new URLSearchParams(location.search).get("c");
     if (legacy) history.replaceState(null, "", `/clients/${encodeURIComponent(legacy)}`);
     const sync = () => setSelected(clientFromPath(location.pathname));
@@ -329,7 +318,6 @@ export default function Dashboard() {
     return () => window.removeEventListener("popstate", sync);
   }, []);
 
-  // keep pinned to bottom
   useEffect(() => {
     const el = logRef.current;
     if (el && follow) el.scrollTop = el.scrollHeight;
@@ -342,7 +330,6 @@ export default function Dashboard() {
     if (atBottom !== follow) setFollow(atBottom);
   };
 
-  // games seen across clients -> filter chips under the search box
   const games = useMemo(() => {
     const m = new Map<number, { game: NonNullable<ClientInfo["profile"]>["game"]; n: number }>();
     for (const c of Object.values(clients)) {
@@ -354,7 +341,7 @@ export default function Dashboard() {
     return [...m.values()].sort((a, b) => b.n - a.n);
   }, [clients]);
   const [gameFilter, setGameFilter] = useState<number | null>(null);
-  // a filter on a game that's no longer listed would hide everyone
+
   useEffect(() => {
     if (gameFilter !== null && !games.some((g) => g.game!.id === gameFilter)) setGameFilter(null);
   }, [games, gameFilter]);
@@ -395,7 +382,6 @@ export default function Dashboard() {
 
   return (
     <div className="flex h-full flex-col gap-3 p-3">
-      {/* header */}
       <header className="flex h-14 shrink-0 items-center gap-4 rounded-2xl bg-panel px-5">
         <Logo src="/alchemy_full.svg" className="aspect-[315/70] h-6" />
         <span className="hidden font-mono text-xs tracking-widest text-dim sm:inline">
@@ -441,7 +427,6 @@ export default function Dashboard() {
         />
       ) : (
         <div className="flex min-h-0 flex-1 gap-3">
-          {/* client list */}
           <aside
             className={`${
               selected ? "hidden md:flex" : "flex"
@@ -526,7 +511,6 @@ export default function Dashboard() {
             </ul>
           </aside>
 
-          {/* main */}
           <main
             className={`${selected ? "flex" : "hidden md:flex"} min-w-0 flex-1 flex-col overflow-hidden rounded-2xl bg-panel`}
           >

@@ -1,4 +1,3 @@
-// Renders an SVG as a solid silhouette in the current text color (white in dark, near-black in light).
 export default function Logo({
   src,
   label = "Alchemy",

@@ -2,9 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-/* ---------- color math ---------- */
-
-type HSV = { h: number; s: number; v: number }; // h 0-360, s/v 0-1
+type HSV = { h: number; s: number; v: number };
 
 function hexToHsv(hex: string): HSV {
   const n = parseInt(hex.slice(1), 16);
@@ -34,7 +32,6 @@ function hsvToHex({ h, s, v }: HSV) {
 
 const clamp = (x: number) => Math.min(1, Math.max(0, x));
 
-/** Calls `onMove(x, y)` (0-1 inside `el`) while the pointer is held down. */
 function useDrag(onMove: (x: number, y: number) => void) {
   const ref = useRef<HTMLDivElement>(null);
   const move = (e: React.PointerEvent) => {
@@ -53,8 +50,6 @@ function useDrag(onMove: (x: number, y: number) => void) {
   };
 }
 
-/* ---------- picker ---------- */
-
 export default function ColorPicker({
   value,
   onChange,
@@ -68,14 +63,13 @@ export default function ColorPicker({
   const [hex, setHex] = useState(value);
   const box = useRef<HTMLDivElement>(null);
 
-  // follow outside changes (presets, hex field) without fighting the drag
   const last = useRef(value);
   useEffect(() => {
     if (value.toLowerCase() !== last.current.toLowerCase()) {
       last.current = value;
       setHsv((cur) => {
         const next = hexToHsv(value);
-        // keep hue when the color is grey/black (hue is undefined there)
+
         return next.s === 0 || next.v === 0 ? { ...next, h: cur.h } : next;
       });
       setHex(value);
@@ -93,7 +87,6 @@ export default function ColorPicker({
   const sv = useDrag((x, y) => commit({ ...hsv, s: x, v: 1 - y }));
   const hue = useDrag((x) => commit({ ...hsv, h: x * 360 }));
 
-  // close on outside click / Escape
   useEffect(() => {
     const down = (e: PointerEvent) => {
       if (box.current && !box.current.contains(e.target as Node)) onClose();
@@ -115,7 +108,6 @@ export default function ColorPicker({
       ref={box}
       className="enter absolute right-0 top-11 z-30 w-64 select-none rounded-2xl bg-hover p-3"
     >
-      {/* saturation / brightness */}
       <div
         {...sv}
         className="relative h-40 cursor-crosshair touch-none rounded-xl"
@@ -134,7 +126,6 @@ export default function ColorPicker({
         />
       </div>
 
-      {/* hue */}
       <div
         {...hue}
         className="relative mt-3 h-3 cursor-pointer touch-none rounded-full"
@@ -152,7 +143,6 @@ export default function ColorPicker({
         />
       </div>
 
-      {/* preview + hex */}
       <div className="mt-3 flex items-center gap-2">
         <span className="size-9 shrink-0 rounded-full" style={{ background: current }} />
         <input

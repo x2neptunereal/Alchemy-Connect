@@ -27,7 +27,7 @@ import {
 } from "@/lib/settings";
 
 const PRESETS = [
-  "#00ff83", // alchemy green
+  "#00ff83",
   "#2dd4bf",
   "#38bdf8",
   "#6366f1",
@@ -74,8 +74,6 @@ export function useSettings() {
 
   return [settings, setSettings] as const;
 }
-
-/* ---------- UI ---------- */
 
 function Section({
   title,

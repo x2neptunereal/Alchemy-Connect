@@ -1,7 +1,6 @@
 import { IconScaleFilled } from "@tabler/icons-react";
 import { LICENSE_HOLDER, LICENSE_TEXT, LICENSE_YEAR } from "@/lib/license";
 
-// Body without the "MIT License" / "Copyright" lines, which are shown as the heading.
 const BODY = LICENSE_TEXT.split("\n\n").slice(2).join("\n\n");
 
 export default function LicensePanel() {

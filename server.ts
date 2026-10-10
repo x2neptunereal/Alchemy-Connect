@@ -1,6 +1,3 @@
-// server.ts — Next.js + WebSocket hub
-//   Roblox  -> ws://host:3000/connect/{id}
-//   Web UI  -> ws://host:3000/ui
 import { createServer, type IncomingMessage, type Server } from "node:http";
 import { readFileSync, writeFileSync } from "node:fs";
 import type { Duplex } from "node:stream";
@@ -25,7 +22,6 @@ import {
 const dev = process.env.NODE_ENV !== "production";
 const port = Number(process.env.PORT ?? 3000);
 
-// ---- connection config (saved next to server.ts) --------------------------
 const CONFIG_FILE = "connect.config.json";
 const config: ConnectionConfig = {
   webPort: port,
@@ -34,7 +30,6 @@ const config: ConnectionConfig = {
   refreshTime: 10,
 };
 
-/** "https://example.com/" -> "example.com"; only host-ish characters. */
 const cleanBaseUrl = (v: unknown) =>
   typeof v === "string"
     ? v
@@ -62,15 +57,15 @@ const saveConfig = () => {
   } catch {}
 };
 
-const MAX_LOG = 1000; // messages kept per client
-const OFFLINE_TTL = 30 * 60_000; // forget offline clients after 30 min
+const MAX_LOG = 1000;
+const OFFLINE_TTL = 30 * 60_000;
 
 interface Client {
   info: ClientInfo;
   socket: WebSocket | null;
   log: LogEntry[];
   seq: number;
-  /** first `count` seen per item this session -> used to work out `gained` */
+
   baseline: Map<string, number>;
 }
 
@@ -111,13 +106,8 @@ function parseId(raw: string): string {
   return id || `anon-${randomBytes(3).toString("hex")}`;
 }
 
-// ---- profiles -----------------------------------------------------------
 const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim().slice(0, 64) : undefined);
 
-/**
- * Roblox messages look like { types = "<kind>", data = { ... } }.
- * Fields inside `data` are merged over top-level ones, so flat messages work too.
- */
 function envelope(text: string): { kind?: string; body: Record<string, unknown> } | null {
   const t = text.trim();
   if (!t.startsWith("{")) return null;
@@ -131,7 +121,6 @@ function envelope(text: string): { kind?: string; body: Record<string, unknown> 
   }
 }
 
-/** { types = "link", data = { username, userid, displayname, time } } */
 function readProfile(text: string): Profile | null {
   const env = envelope(text);
   if (!env || (env.kind && env.kind !== "link")) return null;
@@ -142,7 +131,7 @@ function readProfile(text: string): Profile | null {
     const userId = Number(j.userid ?? j.userId) || undefined;
     if (!username && !displayName && !userId) return null;
     const sent = Number(j.time);
-    // os.time() is in seconds
+
     const time = Number.isFinite(sent) && sent > 0 ? (sent < 1e12 ? sent * 1000 : sent) : undefined;
     const gameId = Number(j.games ?? j.game ?? j.gameId ?? j.universeId) || undefined;
     return { username, displayName, userId, time, game: gameId ? { id: gameId } : undefined };
@@ -168,7 +157,6 @@ async function fetchAvatar(userId: number): Promise<string | undefined> {
   }
 }
 
-// game.GameId -> name + icon
 const gameCache = new Map<number, Promise<GameInfo>>();
 
 function fetchGame(id: number): Promise<GameInfo> {
@@ -189,7 +177,7 @@ function fetchGame(id: number): Promise<GameInfo> {
           const j = (await r.json()) as { data?: { imageUrl?: string }[] };
           info.icon = j.data?.[0]?.imageUrl;
         } catch {}
-        if (!info.name && !info.icon) gameCache.delete(id); // retry next time
+        if (!info.name && !info.icon) gameCache.delete(id);
         return info;
       })(),
     );
@@ -203,7 +191,7 @@ function setProfile(c: Client, p: Profile) {
     ...prev,
     ...Object.fromEntries(Object.entries(p).filter(([, v]) => v !== undefined)),
   };
-  // same game as before: keep the name/icon we already looked up
+
   if (p.game && prev.game?.id === p.game.id) next.game = prev.game;
   c.info.profile = next;
   emitAll({ type: "client", client: c.info });
@@ -227,8 +215,6 @@ function setProfile(c: Client, p: Profile) {
   }
 }
 
-// ---- session stats ------------------------------------------------------
-// Roblox sends: { type = "stats", stats = {...}, items = {...}, started = os.time() }
 const num = (v: unknown) => {
   const n = typeof v === "string" ? Number(v.replace(/,/g, "")) : Number(v);
   return Number.isFinite(n) && v !== "" && v !== null && v !== undefined ? n : undefined;
@@ -249,9 +235,7 @@ const KNOWN_ITEM_KEYS = new Set(
   ),
 );
 
-/** {x, y} | {X, Y} | [x, y] -> [x, y] */
 function pair(v: unknown): [number, number] | undefined {
-  // "150, 150" (e.g. tostring(Vector2))
   if (typeof v === "string") {
     const m = v.match(/(-?[\d.]+)\s*[, x]\s*(-?[\d.]+)/);
     return m ? [Number(m[1]), Number(m[2])] : undefined;
@@ -268,7 +252,6 @@ function pair(v: unknown): [number, number] | undefined {
   return undefined;
 }
 
-/** "masteryLevel" / "mastery_level" -> "Mastery level" */
 const prettyKey = (k: string) => {
   const s = k
     .replace(/[_-]+/g, " ")
@@ -278,7 +261,6 @@ const prettyKey = (k: string) => {
   return s.charAt(0).toUpperCase() + s.slice(1);
 };
 
-/** Sprite defaults: set once on the message or a section instead of on every item. */
 type SpriteDefaults = { imageSize?: unknown; sheetSize?: unknown };
 
 const sheetPx = (v: unknown) => num(Array.isArray(v) ? v[0] : v);
@@ -320,7 +302,6 @@ function parseItems(list: unknown[], group?: string, defaults: SpriteDefaults = 
 
 type StatePatch = Partial<Pick<SessionState, "stats" | "items" | "started">>;
 
-/** { types = "stats", stats = {...}, items = {...} }  (or inside `data`) */
 function readState(text: string): StatePatch | null {
   const env = envelope(text);
   if (!env) return null;
@@ -346,9 +327,6 @@ function readState(text: string): StatePatch | null {
       }));
   }
 
-  // items = { ... }                      -> one "Items" section
-  // items = { swords = {...}, fruits = {...} } -> one section per key
-  // items = { { name = "Swords", types = "weapon", data = {...} }, ... } -> sections in this order
   const isSection = (x: unknown) =>
     !!x && typeof x === "object" && Array.isArray((x as Record<string, unknown>).data);
   if (Array.isArray(j.items) && j.items.length && j.items.every(isSection)) {
@@ -368,7 +346,7 @@ function readState(text: string): StatePatch | null {
   if (patch.items) patch.items = patch.items.slice(0, 200);
 
   const started = num(j.started ?? j.start);
-  if (started) patch.started = started < 1e12 ? started * 1000 : started; // accept os.time() seconds
+  if (started) patch.started = started < 1e12 ? started * 1000 : started;
 
   return Object.keys(patch).length ? patch : null;
 }
@@ -389,8 +367,6 @@ async function fetchIcons(ids: number[]) {
   }
 }
 
-// Sprite sheets need the whole image, not a 150px thumbnail.
-// Try the full-resolution file first; fall back to the largest square thumbnail.
 const sheetCache = new Map<number, { url: string; native: boolean } | null>();
 const sheetBytes = new Map<number, { type: string; body: Buffer }>();
 
@@ -445,7 +421,6 @@ const withIcons = (items: Item[]) =>
     return { ...it, icon: iconCache.get(it.iconId) };
   });
 
-/** Items without `gained`: gained = count now - first count seen this session. */
 function fillGained(c: Client, items: Item[]) {
   return items.map((it) => {
     if (it.count === undefined || it.gained !== undefined) return it;
@@ -478,7 +453,6 @@ function setState(c: Client, patch: StatePatch) {
   }
 }
 
-// ---- Roblox side --------------------------------------------------------
 function onRoblox(ws: WebSocket, req: IncomingMessage, id: string) {
   const now = Date.now();
   let c = clients.get(id);
@@ -503,7 +477,7 @@ function onRoblox(ws: WebSocket, req: IncomingMessage, id: string) {
     clients.set(id, c);
   }
   c.socket = ws;
-  c.baseline = new Map(); // new connection = new session: gains start from 0 again
+  c.baseline = new Map();
   c.info.online = true;
   c.info.connectedAt = now;
   c.info.lastSeen = now;
@@ -520,10 +494,10 @@ function onRoblox(ws: WebSocket, req: IncomingMessage, id: string) {
     if (st) setState(client, st);
     push(id, client, "in", text);
   });
-  // ids that are plain numbers are treated as a UserId until a profile message arrives
+
   if (!client.info.profile && /^\d+$/.test(id)) setProfile(client, { userId: Number(id) });
   ws.on("close", () => {
-    if (client.socket !== ws) return; // replaced
+    if (client.socket !== ws) return;
     client.socket = null;
     client.info.online = false;
     client.info.lastSeen = Date.now();
@@ -533,7 +507,6 @@ function onRoblox(ws: WebSocket, req: IncomingMessage, id: string) {
   ws.on("error", () => {});
 }
 
-// ---- Web UI side --------------------------------------------------------
 function onUI(ws: WebSocket) {
   uis.set(ws, { subscribed: null });
   emit(ws, { type: "snapshot", clients: [...clients.values()].map((c) => c.info) });
@@ -593,7 +566,7 @@ function onUI(ws: WebSocket) {
         config.refreshTime = cleanRefresh(ev.refreshTime) ?? config.refreshTime;
         const p = Number(ev.port);
         if (Number.isInteger(p) && p > 0 && p < 65536 && p !== config.wsPort) {
-          void listenRoblox(p); // saves + broadcasts
+          void listenRoblox(p);
         } else {
           saveConfig();
           emitAll({ type: "config", config });
@@ -606,7 +579,6 @@ function onUI(ws: WebSocket) {
   ws.on("error", () => {});
 }
 
-// prune long-offline clients
 setInterval(() => {
   const cutoff = Date.now() - OFFLINE_TTL;
   for (const [id, c] of clients) {
@@ -617,7 +589,6 @@ setInterval(() => {
   }
 }, 60_000).unref();
 
-// ---- extra Roblox-only port ----------------------------------------------
 let robloxServer: Server | null = null;
 let robloxWss: WebSocketServer | null = null;
 
@@ -629,7 +600,6 @@ function closeRobloxServer() {
   robloxWss = null;
 }
 
-/** Open `p` for Roblox clients (ws://host:p/connect/{id}). p === webPort -> only the main port. */
 async function listenRoblox(p: number) {
   closeRobloxServer();
   config.error = undefined;
@@ -669,13 +639,11 @@ async function listenRoblox(p: number) {
   emitAll({ type: "config", config });
 }
 
-// ---- boot ---------------------------------------------------------------
 const app = next({ dev });
 const handle = app.getRequestHandler();
 
 app.prepare().then(() => {
   const server = createServer((req, res) => {
-    // full-resolution sprite sheets fetched from Roblox (see resolveSheet)
     const m = req.url?.match(/^\/rbx-asset\/(\d+)/);
     const sheet = m && sheetBytes.get(Number(m[1]));
     if (sheet) {
@@ -697,7 +665,7 @@ app.prepare().then(() => {
       const id = parseId(pathname.slice(CLIENT_PATH.length + 1));
       wss.handleUpgrade(req, socket, head, (ws) => onRoblox(ws, req, id));
     } else {
-      nextUpgrade(req, socket, head); // Next.js HMR etc.
+      nextUpgrade(req, socket, head);
     }
   });
 

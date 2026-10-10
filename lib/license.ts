@@ -1,4 +1,3 @@
-// Shown in the License tab; the same text is in /LICENSE.
 export const LICENSE_HOLDER = "Alchemy Hub";
 export const LICENSE_YEAR = "2023-2026";
 
