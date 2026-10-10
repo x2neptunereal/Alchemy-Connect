@@ -1,36 +1,53 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Alchemy Connect
 
-## Getting Started
+**English** · [ภาษาไทย](README.th.md)
 
-First, run the development server:
+Server and dashboard for Alchemy Connect. Roblox clients connect here over WebSocket and show up live on the page.
+
+Client (Lua) docs are at [connect.getalchemy.net](https://connect.getalchemy.net).
+
+## What you need
+
+- Node.js 20 or newer
+- npm
+
+## Dev
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000. It reloads when you change files.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Build and run
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm install
+npm run build
+npm start
+```
 
-## Learn More
+Same address, http://localhost:3000.
 
-To learn more about Next.js, take a look at the following resources:
+## Port
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Default is 3000. Change it with `PORT`:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+# macOS / Linux
+PORT=4000 npm start
 
-## Deploy on Vercel
+# Windows (PowerShell)
+$env:PORT=4000; npm start
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+The port Roblox connects to, the base URL and the refresh time are set from the page (Settings → Connection). They're saved to `connect.config.json` next to `server.ts`. Delete that file to go back to defaults.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Heads up
+
+There's no login. Anyone who can reach the port can see your clients and send them messages. Fine on your own machine; if you open it to the internet, put something in front of it first.
+
+## License
+
+MIT. See [LICENSE](LICENSE). © 2023–2026 Alchemy Hub.
